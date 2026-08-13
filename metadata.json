@@ -1,0 +1,6 @@
+{
+  "name": "SuratPaintingSolution",
+  "description": "Professional house painting and waterproofing contractor in Surat, Gujarat. For Surat's Families, For Their Homes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-navy: #002048;
+    --color-orange: #F85000;
+    --color-blue-secondary: #0058B8;
+    --color-warm-cream: #F8F0D8;
+    --color-cream-light: #FFFDF9;
+    --color-bg-light: #FAF8F5;
+    --color-charcoal: #1E293B;
+  }
+
+  body {
+    background-color: var(--color-bg-light);
+    color: var(--color-charcoal);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    overflow-x: hidden;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Custom Color Utility Classes */
+.bg-navy { background-color: #002048; }
+.text-navy { color: #002048; }
+.border-navy { border-color: #002048; }
+
+.bg-orange-primary { background-color: #F85000; }
+.text-orange-primary { color: #F85000; }
+.border-orange-primary { border-color: #F85000; }
+
+.bg-blue-secondary { background-color: #0058B8; }
+.text-blue-secondary { color: #0058B8; }
+.border-blue-secondary { border-color: #0058B8; }
+
+.bg-warm-cream { background-color: #F8F0D8; }
+.bg-cream-light { background-color: #FFFDF9; }
+.text-warm-cream { color: #F8F0D8; }
+
+/* Custom signature roller animation */
+@keyframes paintRollerStroke {
+  0% { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); }
+  100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+}
+
+.animate-paint-stroke {
+  animation: paintRollerStroke 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Focus outline for accessibility */
+*:focus-visible {
+  outline: 2px solid #F85000;
+  outline-offset: 2px;
+}

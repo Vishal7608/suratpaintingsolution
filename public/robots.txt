@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /contractor-login
+
+Sitemap: https://suratpaintingsolution.onrender.com/sitemap.xml

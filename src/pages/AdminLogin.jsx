@@ -4,7 +4,7 @@ import SeoHead from '../components/SeoHead';
 import { ShieldCheck, Lock, User, AlertCircle, ArrowRight } from 'lucide-react';
 
 export default function AdminLogin() {
-  const [username, setUsername] = useState('admin');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -13,27 +13,31 @@ export default function AdminLogin() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!username.trim() || !password.trim()) {
+      setError('Please enter both Admin Username and Password.');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
-        headers: { 'Content-[#Type': 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password: password || 'Surat@Painters2026' })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim(), password: password.trim() })
       });
 
       const data = await res.json();
-      if (data.success && data.token) {
+      if (res.ok && data.success && data.token) {
         localStorage.setItem('adminToken', data.token);
         localStorage.setItem('adminUser', JSON.stringify(data.user));
         navigate('/admin-dashboard');
       } else {
-        setError(data.error || 'Authentication failed.');
+        setError(data.error || 'Access Denied: Invalid admin credentials.');
       }
     } catch (err) {
-      // Fallback for offline or local preview
-      localStorage.setItem('adminToken', 'local-admin-preview-token');
-      navigate('/admin-dashboard');
+      setError('Server connection error. Please verify server status or credentials.');
     } finally {
       setLoading(false);
     }
@@ -42,8 +46,8 @@ export default function AdminLogin() {
   return (
     <>
       <SeoHead
-        title="Google Policy Admin & Contractor Portal | SuratPaintingSolution"
-        description="Internal portal for SuratPaintingSolution Google Policy Verification & Publishing System."
+        title="Admin Portal | SuratPaintingSolution"
+        description="Protected internal admin portal."
         noindex={true}
       />
 
@@ -53,16 +57,16 @@ export default function AdminLogin() {
             <div className="w-14 h-14 rounded-2xl bg-[#002048] text-[#F85000] flex items-center justify-center mx-auto shadow-md">
               <ShieldCheck className="w-8 h-8" />
             </div>
-            <h1 className="text-2xl font-black text-[#002048]">Google Policy Admin Portal</h1>
+            <h1 className="text-2xl font-black text-[#002048]">Admin Authentication</h1>
             <p className="text-xs text-slate-500">
-              Surat Painting Solutions • Policy-Verified Publishing System
+              Enter authorized administrator credentials to access dashboard
             </p>
           </div>
 
           {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2">
+            <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
+              <span className="font-semibold">{error}</span>
             </div>
           )}
 
@@ -74,10 +78,11 @@ export default function AdminLogin() {
               <div className="relative">
                 <input
                   type="text"
+                  required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="admin"
-                  className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:border-[#F85000] focus:ring-1 focus:ring-[#F85000]"
+                  placeholder="Enter admin username"
+                  className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:border-[#F85000] focus:ring-1 focus:ring-[#F85000] outline-none"
                 />
                 <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
               </div>
@@ -90,10 +95,11 @@ export default function AdminLogin() {
               <div className="relative">
                 <input
                   type="password"
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Surat@Painters2026"
-                  className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:border-[#F85000] focus:ring-1 focus:ring-[#F85000]"
+                  placeholder="••••••••••••"
+                  className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:border-[#F85000] focus:ring-1 focus:ring-[#F85000] outline-none"
                 />
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
               </div>
@@ -104,23 +110,14 @@ export default function AdminLogin() {
               disabled={loading}
               className="w-full bg-[#002048] hover:bg-[#003878] text-white py-3 rounded-xl text-sm font-bold shadow-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <span>{loading ? 'Authenticating...' : 'Sign In to Google Policy Dashboard'}</span>
+              <span>{loading ? 'Verifying Credentials...' : 'Sign In to Admin Dashboard'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
 
-          <div className="pt-2 border-t border-slate-100 text-center">
-            <button
-              onClick={() => {
-                localStorage.setItem('adminToken', 'demo-token');
-                navigate('/admin-dashboard');
-              }}
-              className="text-xs font-bold text-[#F85000] hover:underline inline-flex items-center gap-1"
-            >
-              Direct Access to Policy Verification System &rarr;
-            </button>
+          <div className="pt-2 text-center text-xs text-slate-400">
+            Protected by JWT & Environment Security Policies
           </div>
-
         </div>
       </div>
     </>

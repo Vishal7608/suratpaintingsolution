@@ -2,15 +2,12 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'housepainters-surat-secure-jwt-secret-key-2026';
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Surat@Painters2026';
 
-let adminPasswordHash = bcrypt.hashSync(DEFAULT_ADMIN_PASSWORD, 10);
 const loginAttempts = new Map();
 
 export const authService = {
   /**
-   * Verify admin login credentials with lockout protection
+   * Verify admin login credentials strictly against process.env variables
    */
   async login(username, password, ip) {
     const now = Date.now();
@@ -24,30 +21,44 @@ export const authService = {
       };
     }
 
-    if (username !== ADMIN_USERNAME) {
+    const expectedUsername = process.env.ADMIN_USERNAME != null ? String(process.env.ADMIN_USERNAME).trim() : null;
+    const expectedPassword = process.env.ADMIN_PASSWORD != null ? String(process.env.ADMIN_PASSWORD).trim() : null;
+
+    if (!expectedUsername || !expectedPassword) {
+      return {
+        success: false,
+        error: 'Admin authentication is not configured. Please set ADMIN_USERNAME and ADMIN_PASSWORD in environment variables (.env).'
+      };
+    }
+
+    const inputUser = String(username || '').trim();
+    const inputPass = String(password || '').trim();
+
+    if (!inputUser || !inputPass || inputUser !== expectedUsername) {
       tracker.attempts += 1;
       if (tracker.attempts >= 5) {
         tracker.lockoutUntil = now + 15 * 60 * 1000;
       }
       loginAttempts.set(ip, tracker);
-      return { success: false, error: 'Invalid admin credentials.' };
+      return { success: false, error: 'Access Denied: Invalid admin username.' };
     }
 
-    const passwordMatch = await bcrypt.compare(password, adminPasswordHash);
+    // Direct match against active .env password or bcrypt hash (supporting numbers or alphanumeric)
+    const passwordMatch = (inputPass === expectedPassword) || (expectedPassword.startsWith('$2') && bcrypt.compareSync(inputPass, expectedPassword));
     if (!passwordMatch) {
       tracker.attempts += 1;
       if (tracker.attempts >= 5) {
         tracker.lockoutUntil = now + 15 * 60 * 1000;
       }
       loginAttempts.set(ip, tracker);
-      return { success: false, error: 'Invalid admin credentials.' };
+      return { success: false, error: 'Access Denied: Incorrect password.' };
     }
 
     loginAttempts.delete(ip);
 
     const user = {
       id: 'admin-1',
-      username: ADMIN_USERNAME,
+      username: expectedUsername,
       role: 'admin'
     };
 

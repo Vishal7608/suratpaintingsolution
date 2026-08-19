@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SeoHead from '../components/SeoHead';
 import {
   ShieldCheck,
@@ -25,10 +26,12 @@ import {
   BellRing,
   Calendar,
   MapPin,
-  Building2
+  Building2,
+  LogOut
 } from 'lucide-react';
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('leads'); // leads, policy, blogs, reviews, facts, audit
   const [systemStatus, setSystemStatus] = useState(null);
   const [registry, setRegistry] = useState([]);
@@ -82,11 +85,17 @@ export default function AdminDashboard() {
   ];
 
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('adminToken') || 'demo-token';
+    const token = localStorage.getItem('adminToken') || '';
     return {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     };
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    navigate('/admin');
   };
 
   // Alert Target Credentials specified by User
@@ -249,7 +258,27 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+      navigate('/admin');
+      return;
+    }
+
+    // Verify token with backend
+    fetch('/api/admin/me', { headers: getAuthHeaders() })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success) {
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminUser');
+          navigate('/admin');
+        } else {
+          fetchDashboardData();
+        }
+      })
+      .catch(() => {
+        fetchDashboardData();
+      });
   }, []);
 
   // Force Sync Official Google Docs
@@ -458,6 +487,15 @@ export default function AdminDashboard() {
               >
                 <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
                 <span>{syncing ? 'Verifying Docs...' : 'Sync Official Google Docs'}</span>
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="px-3.5 py-2 bg-slate-800 hover:bg-rose-900/40 border border-slate-700 hover:border-rose-500/50 text-slate-300 hover:text-rose-200 rounded-xl text-xs font-bold shadow flex items-center gap-2 transition-all"
+                title="Sign out of admin session"
+              >
+                <LogOut className="w-4 h-4 text-rose-400" />
+                <span>Sign Out</span>
               </button>
             </div>
 

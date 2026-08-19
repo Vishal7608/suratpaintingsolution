@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Phone, MessageSquare, Menu, X, ChevronDown, Shield } from 'lucide-react';
 import Logo from './Logo';
@@ -7,7 +7,42 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
   const [areasDropdownOpen, setAreasDropdownOpen] = useState(false);
+  
+  // Mobile accordion state (collapsed by default for compact height)
+  const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
+  const [mobileAreasOpen, setMobileAreasOpen] = useState(false);
+  
   const location = useLocation();
+  const lastScrollY = useRef(0);
+
+  // Auto close mobile menu smoothly on page scroll or route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setMobileServicesOpen(false);
+    setMobileAreasOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    let accumulatedScroll = 0;
+    lastScrollY.current = window.scrollY;
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      const scrollDiff = Math.abs(currentScrollY - lastScrollY.current);
+      accumulatedScroll += scrollDiff;
+      lastScrollY.current = currentScrollY;
+
+      // When user scrolls down/up on the page beyond 40px, gently close mobile slider
+      if (accumulatedScroll > 40) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [mobileMenuOpen]);
 
   const navLinks = [
     { name: 'Home', path: '/' },
@@ -239,100 +274,156 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
+      {/* Mobile Drawer Menu - Compact, Animated & Auto-Scroll Dismissible */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-b border-slate-200 px-4 pt-2 pb-6 space-y-3">
-          {navLinks.map((link) => (
-            <div key={link.name}>
-              {link.dropdownType === 'services' ? (
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between py-2 px-3 text-base font-semibold text-slate-800 bg-slate-50 rounded-lg">
-                    <span>{link.name}</span>
-                    <Link
-                      to="/services"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="text-xs font-extrabold text-[#F85000] hover:underline"
+        <>
+          {/* Subtle backdrop overlay - Clicking outside immediately closes menu */}
+          <div
+            onClick={() => setMobileMenuOpen(false)}
+            className="lg:hidden fixed inset-0 top-[108px] bg-slate-900/30 backdrop-blur-[2px] z-40 transition-opacity duration-300 animate-fadeIn"
+            aria-hidden="true"
+          />
+
+          {/* Drawer container with slide-in animation and max-height */}
+          <div className="lg:hidden relative z-50 bg-white border-b border-slate-200 shadow-2xl max-h-[72vh] overflow-y-auto px-4 pt-3 pb-6 space-y-2 transition-all duration-300 animate-fadeIn">
+            {navLinks.map((link) => (
+              <div key={link.name}>
+                {link.dropdownType === 'services' ? (
+                  <div className="border border-slate-100 rounded-xl overflow-hidden bg-slate-50/70 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => setMobileServicesOpen(!mobileServicesOpen)}
+                      className="w-full flex items-center justify-between py-2.5 px-3 text-sm font-bold text-slate-800 hover:bg-slate-100/80 transition-colors"
                     >
-                      View All 16 →
-                    </Link>
-                  </div>
-                  <div className="space-y-1 pl-3 pt-1">
-                    {quickServices.slice(0, 4).map((qs) => (
-                      <Link
-                        key={qs.path}
-                        to={qs.path}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center justify-between text-xs py-1.5 px-2 text-slate-700 hover:text-[#F85000] font-medium"
-                      >
-                        <span>• {qs.name}</span>
-                        <span className="text-[9px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded">
-                          {qs.tag}
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[#F85000]"></span>
+                        {link.name}
+                      </span>
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                        <span className="text-[11px] font-semibold text-[#F85000]">
+                          {mobileServicesOpen ? 'Hide' : 'Quick Menu'}
                         </span>
-                      </Link>
-                    ))}
+                        <ChevronDown
+                          className={`w-4 h-4 transition-transform duration-200 text-slate-400 ${
+                            mobileServicesOpen ? 'rotate-180 text-[#F85000]' : ''
+                          }`}
+                        />
+                      </div>
+                    </button>
+
+                    {mobileServicesOpen && (
+                      <div className="p-2 pt-0 space-y-1 bg-white border-t border-slate-100 animate-fadeIn">
+                        {quickServices.slice(0, 5).map((qs) => (
+                          <Link
+                            key={qs.path}
+                            to={qs.path}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center justify-between text-xs py-2 px-2.5 rounded-lg text-slate-700 hover:bg-amber-50 hover:text-[#F85000] font-medium transition-colors"
+                          >
+                            <span className="truncate">• {qs.name}</span>
+                            <span className="text-[9px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.5 rounded shrink-0 ml-1">
+                              {qs.tag}
+                            </span>
+                          </Link>
+                        ))}
+                        <div className="pt-1.5 pb-1">
+                          <Link
+                            to="/services"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="block text-center py-2 px-3 text-xs font-bold text-white bg-[#002048] hover:bg-[#F85000] rounded-lg transition-colors shadow-xs"
+                          >
+                            Visit All 18+ Services →
+                          </Link>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ) : link.dropdownType === 'areas' ? (
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between py-2 px-3 text-base font-semibold text-slate-800 bg-slate-50 rounded-lg">
-                    <span>{link.name}</span>
-                    <Link
-                      to="/areas"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="text-xs font-extrabold text-[#F85000] hover:underline"
+                ) : link.dropdownType === 'areas' ? (
+                  <div className="border border-slate-100 rounded-xl overflow-hidden bg-slate-50/70 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => setMobileAreasOpen(!mobileAreasOpen)}
+                      className="w-full flex items-center justify-between py-2.5 px-3 text-sm font-bold text-slate-800 hover:bg-slate-100/80 transition-colors"
                     >
-                      View All 26+ →
-                    </Link>
-                  </div>
-                  <div className="space-y-1 pl-3 pt-1">
-                    {quickAreas.slice(0, 5).map((qa) => (
-                      <Link
-                        key={qa.path}
-                        to={qa.path}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center justify-between text-xs py-1.5 px-2 text-slate-700 hover:text-[#F85000] font-medium"
-                      >
-                        <span>📍 {qa.name}</span>
-                        <span className="text-[9px] bg-amber-50 text-[#F85000] border border-amber-200 font-bold px-1.5 py-0.5 rounded">
-                          {qa.tag}
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[#0058B8]"></span>
+                        {link.name}
+                      </span>
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                        <span className="text-[11px] font-semibold text-[#0058B8]">
+                          {mobileAreasOpen ? 'Hide' : 'Quick Menu'}
                         </span>
-                      </Link>
-                    ))}
+                        <ChevronDown
+                          className={`w-4 h-4 transition-transform duration-200 text-slate-400 ${
+                            mobileAreasOpen ? 'rotate-180 text-[#0058B8]' : ''
+                          }`}
+                        />
+                      </div>
+                    </button>
+
+                    {mobileAreasOpen && (
+                      <div className="p-2 pt-0 space-y-1 bg-white border-t border-slate-100 animate-fadeIn">
+                        {quickAreas.slice(0, 5).map((qa) => (
+                          <Link
+                            key={qa.path}
+                            to={qa.path}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center justify-between text-xs py-2 px-2.5 rounded-lg text-slate-700 hover:bg-blue-50 hover:text-[#0058B8] font-medium transition-colors"
+                          >
+                            <span className="truncate">📍 {qa.name}</span>
+                            <span className="text-[9px] bg-amber-50 text-[#F85000] border border-amber-200 font-bold px-1.5 py-0.5 rounded shrink-0 ml-1">
+                              {qa.tag}
+                            </span>
+                          </Link>
+                        ))}
+                        <div className="pt-1.5 pb-1">
+                          <Link
+                            to="/areas"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="block text-center py-2 px-3 text-xs font-bold text-white bg-[#002048] hover:bg-[#F85000] rounded-lg transition-colors shadow-xs"
+                          >
+                            Visit All 30+ Surat Areas →
+                          </Link>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ) : (
-                <Link
-                  to={link.path}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`block py-2.5 px-3 text-base font-semibold rounded-md ${
-                    isActive(link.path)
-                      ? 'bg-[#F8F0D8] text-[#F85000]'
-                      : 'text-[#002048] hover:bg-slate-50'
-                  }`}
-                >
-                  {link.name}
-                </Link>
-              )}
+                ) : (
+                  <Link
+                    to={link.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`block py-2 px-3 text-sm font-semibold rounded-lg transition-colors ${
+                      isActive(link.path)
+                        ? 'bg-[#F8F0D8] text-[#F85000] font-bold'
+                        : 'text-[#002048] hover:bg-slate-50'
+                    }`}
+                  >
+                    {link.name}
+                  </Link>
+                )}
+              </div>
+            ))}
+
+            {/* Quick CTA Actions */}
+            <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
+              <Link
+                to="/contact"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-center bg-[#F85000] hover:bg-[#e04800] text-white py-2.5 px-2 rounded-lg text-xs font-bold shadow-xs transition-colors"
+              >
+                Get Free Estimate
+              </Link>
+              <a
+                href="https://wa.me/919408197990?text=Hi%20SuratPaintingSolution%2C%20I%20need%20a%20painting%20quote"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-center bg-[#25D366] hover:bg-emerald-600 text-white py-2.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <MessageSquare className="w-3.5 h-3.5" /> WhatsApp
+              </a>
             </div>
-          ))}
-          <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
-            <Link
-              to="/contact"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full text-center bg-[#F85000] text-white py-3 rounded-lg font-bold shadow-sm"
-            >
-              Request Quick Quote
-            </Link>
-            <a
-              href="https://wa.me/919408197990?text=Hi%20SuratPaintingSolution%2C%20I%20need%20a%20painting%20quote"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full text-center bg-[#25D366] text-white py-2.5 rounded-lg font-bold flex items-center justify-center gap-2"
-            >
-              <MessageSquare className="w-4 h-4" /> Chat on WhatsApp
-            </a>
           </div>
-        </div>
+        </>
       )}
     </header>
   );

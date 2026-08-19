@@ -1119,12 +1119,11 @@ export default function AdminDashboard() {
                 <table className="w-full text-left text-xs text-slate-300">
                   <thead className="bg-slate-900/90 text-slate-400 uppercase text-[10px] font-mono tracking-wider border-b border-slate-700">
                     <tr>
-                      <th className="p-3.5">Source Name</th>
+                      <th className="p-3.5">Policy Name &amp; Live URL</th>
+                      <th className="p-3.5">Policy Job / Responsibility</th>
                       <th className="p-3.5">Category</th>
-                      <th className="p-3.5">Domain</th>
                       <th className="p-3.5">HTTP Status</th>
-                      <th className="p-3.5">Content SHA256</th>
-                      <th className="p-3.5">Status</th>
+                      <th className="p-3.5">Status &amp; Auto-Heal</th>
                       <th className="p-3.5">Last Verified</th>
                     </tr>
                   </thead>
@@ -1144,9 +1143,16 @@ export default function AdminDashboard() {
                             </a>
                           </div>
                           <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">{src.current_url}</div>
+                          {src.previous_urls && src.previous_urls.length > 0 && (
+                            <div className="text-[9px] text-emerald-400 font-mono mt-0.5">
+                              ↺ Auto-Healed from previous URL
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-3.5 text-slate-300 text-xs max-w-xs">
+                          <div className="font-medium">{src.policy_job || src.notes}</div>
                         </td>
                         <td className="p-3.5 font-mono text-[11px] text-amber-300">{src.source_type}</td>
-                        <td className="p-3.5 font-mono text-emerald-400 font-bold">{src.official_domain}</td>
                         <td className="p-3.5">
                           <span className={`px-2 py-0.5 rounded font-mono text-[11px] font-bold ${
                             src.http_status === 200 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
@@ -1154,15 +1160,19 @@ export default function AdminDashboard() {
                             HTTP {src.http_status}
                           </span>
                         </td>
-                        <td className="p-3.5 font-mono text-[10px] text-slate-400">{src.content_hash_if_available || 'Verified'}</td>
                         <td className="p-3.5">
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
-                            src.status === 'ACTIVE'
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                              : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                          }`}>
-                            {src.status}
-                          </span>
+                          <div className="space-y-1">
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase inline-block ${
+                              src.status === 'ACTIVE'
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                            }`}>
+                              {src.status}
+                            </span>
+                            {src.notes && src.notes.includes('Auto') && (
+                              <div className="text-[9px] text-emerald-400 font-medium">{src.notes}</div>
+                            )}
+                          </div>
                         </td>
                         <td className="p-3.5 text-slate-400 text-[11px]">
                           {new Date(src.last_verified_at).toLocaleTimeString()}

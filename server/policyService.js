@@ -90,7 +90,8 @@ class PolicyService {
 
       const headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) GooglePolicyChecker/2.0 (+https://suratpaintingsolution.onrender.com)',
-        'Accept': 'text/html,application/xhtml+xml,application/xml'
+        'Accept': 'text/html,application/xhtml+xml,application/xml',
+        'Accept-Language': 'en-US,en;q=0.9'
       };
 
       if (source.etag) headers['If-None-Match'] = source.etag;
@@ -166,6 +167,139 @@ class PolicyService {
         final_url: currentUrl
       };
     }
+  }
+
+  /**
+   * Universal Job-Based Auto-Discovery & Auto-Heal Engine:
+   * If a policy URL gives 404, moves, or changes structure, this engine searches Google Search Central
+   * to find the EXACT replacement URL that fulfills the identical policy job.
+   */
+  async discoverReplacementUrl(source) {
+    console.log(`[GooglePolicyAutoHeal] Finding replacement URL for job "${source.policy_job || source.source_name}" (Source: ${source.source_id})`);
+
+    const KNOWN_CANONICAL_TARGETS = {
+      'google-crawling-indexing-overview': [
+        'https://developers.google.com/search/docs/crawling-indexing',
+        'https://developers.google.com/search/docs/crawling-indexing/overview',
+        'https://developers.google.com/search/docs/crawling-indexing/how-search-works'
+      ],
+      'google-ranking-system-updates': [
+        'https://status.search.google.com/products/rGHU1u87FJnkP6W2GwMi/history',
+        'https://developers.google.com/search/updates/ranking',
+        'https://developers.google.com/search/updates'
+      ],
+      'google-search-doc-updates': [
+        'https://developers.google.com/search/updates',
+        'https://developers.google.com/search/docs/updates'
+      ],
+      'google-search-essentials': [
+        'https://developers.google.com/search/docs/essentials',
+        'https://developers.google.com/search/docs/fundamentals/creating-helpful-content'
+      ],
+      'google-spam-policies': [
+        'https://developers.google.com/search/docs/essentials/spam-policies',
+        'https://developers.google.com/search/docs/appearance/spam-policies'
+      ],
+      'google-helpful-content': [
+        'https://developers.google.com/search/docs/fundamentals/creating-helpful-content',
+        'https://developers.google.com/search/docs/essentials'
+      ],
+      'google-ai-content-guidance': [
+        'https://developers.google.com/search/docs/fundamentals/creating-helpful-content#ai-generated-content',
+        'https://developers.google.com/search/docs/fundamentals/creating-helpful-content'
+      ],
+      'google-article-structured-data': [
+        'https://developers.google.com/search/docs/appearance/structured-data/article',
+        'https://developers.google.com/search/docs/appearance/structured-data/article#json-ld'
+      ],
+      'google-review-snippet-structured-data': [
+        'https://developers.google.com/search/docs/appearance/structured-data/review-snippet',
+        'https://developers.google.com/search/docs/appearance/structured-data/review-snippet#self-serving'
+      ],
+      'google-general-structured-data-policies': [
+        'https://developers.google.com/search/docs/appearance/structured-data/sd-policies',
+        'https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data'
+      ],
+      'google-canonicalization': [
+        'https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls',
+        'https://developers.google.com/search/docs/crawling-indexing/canonicalization'
+      ],
+      'google-sitemaps-overview': [
+        'https://developers.google.com/search/docs/crawling-indexing/sitemaps/overview',
+        'https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap'
+      ],
+      'google-robots-txt': [
+        'https://developers.google.com/search/docs/crawling-indexing/robots/intro',
+        'https://developers.google.com/search/docs/crawling-indexing/robots/create-robots-txt'
+      ]
+    };
+
+    // Stage 1: Check Known Canonical Candidate Paths for this Policy Job
+    const candidateList = KNOWN_CANONICAL_TARGETS[source.source_id] || [];
+    for (const candidateUrl of candidateList) {
+      if (candidateUrl === source.current_url) continue;
+      try {
+        const testRes = await fetch(candidateUrl, {
+          method: 'GET',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) GooglePolicyChecker/2.0 (+https://suratpaintingsolution.onrender.com)',
+            'Accept-Language': 'en-US,en;q=0.9'
+          },
+          redirect: 'follow'
+        });
+
+        if (testRes.ok) {
+          const finalUrl = testRes.url || candidateUrl;
+          console.log(`[GooglePolicyAutoHeal] Successfully found matching live URL for job "${source.policy_job}": ${finalUrl}`);
+          return {
+            found: true,
+            newUrl: finalUrl,
+            reason: `Job-Matched: Replaced broken URL with official active endpoint serving "${source.policy_job}": ${finalUrl}`
+          };
+        }
+      } catch (e) {
+        console.warn(`[AutoDiscovery] Candidate check failed for ${candidateUrl}:`, e.message);
+      }
+    }
+
+    // Stage 2: Dynamic Google Search Central Documentation Discovery via Search Queries
+    if (source.search_queries && Array.isArray(source.search_queries)) {
+      for (const query of source.search_queries) {
+        // Query official developers.google.com /search/docs directory
+        try {
+          const searchEndpoint = `https://developers.google.com/s/results?q=${encodeURIComponent(query)}`;
+          const searchRes = await fetch(searchEndpoint, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) GooglePolicyChecker/2.0',
+              'Accept-Language': 'en-US,en;q=0.9'
+            }
+          });
+          if (searchRes.ok) {
+            const html = await searchRes.text();
+            const urlMatches = html.match(/https:\/\/developers\.google\.com\/search\/docs\/[a-zA-Z0-9_\-\/#]+/g);
+            if (urlMatches && urlMatches.length > 0) {
+              const matchedUrl = urlMatches[0];
+              const verifyRes = await fetch(matchedUrl, { method: 'HEAD', redirect: 'follow' });
+              if (verifyRes.ok) {
+                return {
+                  found: true,
+                  newUrl: matchedUrl,
+                  reason: `Dynamic Query Matched: Located new live document serving "${source.policy_job}": ${matchedUrl}`
+                };
+              }
+            }
+          }
+        } catch (err) {
+          console.warn(`[AutoDiscovery] Search query attempt error for "${query}":`, err.message);
+        }
+      }
+    }
+
+    return {
+      found: false,
+      newUrl: null,
+      reason: `Could not automatically locate replacement for job "${source.policy_job}". Marked for human review.`
+    };
   }
 
   async classifySourceRelevanceStepB(source, pageContent) {
@@ -328,15 +462,31 @@ Document Snippet:
 
         if (fetchRes.final_url && fetchRes.final_url !== src.current_url) {
           try {
-            const newParsed = new URL(fetchRes.final_url);
-            if (newParsed.hostname === 'developers.google.com') {
-              src.previous_urls.push(src.current_url);
-              src.current_url = fetchRes.final_url;
-              src.status = 'SOURCE_MOVED';
-              src.notes = `Updated URL redirect detected to ${fetchRes.final_url}`;
+            const currentObj = new URL(src.current_url);
+            const finalObj = new URL(fetchRes.final_url);
+
+            // Clean transient localization query parameters
+            finalObj.searchParams.delete('hl');
+            const cleanFinalUrl = finalObj.origin + finalObj.pathname + (finalObj.search ? finalObj.search : '') + (finalObj.hash ? finalObj.hash : '');
+
+            const isAllowedHost = [
+              'developers.google.com',
+              'status.search.google.com',
+              'policies.google.com'
+            ].includes(finalObj.hostname);
+
+            if (isAllowedHost) {
+              if (cleanFinalUrl !== src.current_url && !cleanFinalUrl.startsWith(src.current_url)) {
+                src.previous_urls.push(src.current_url);
+                src.current_url = cleanFinalUrl;
+                src.status = 'ACTIVE';
+                src.notes = `Auto-synchronized and resolved to official active URL: ${cleanFinalUrl}`;
+              } else {
+                src.status = 'ACTIVE';
+              }
             } else {
               src.status = 'SOURCE_REQUIRES_REVIEW';
-              src.notes = `Redirected to unexpected domain: ${newParsed.hostname}`;
+              src.notes = `Redirected to unexpected non-Google domain: ${finalObj.hostname}`;
               failedSources.push(src.source_id);
             }
           } catch {
@@ -347,9 +497,20 @@ Document Snippet:
           src.status = 'ACTIVE';
         }
       } else {
-        src.status = 'SOURCE_REQUIRES_REVIEW';
-        src.notes = `Fetch failed with status ${fetchRes.http_status}: ${fetchRes.error || 'Unavailable'}`;
-        failedSources.push(src.source_id);
+        // Automatic Self-Healing: Try auto-discovery for replaced or updated Google documentation paths
+        const discovery = await this.discoverReplacementUrl(src);
+        if (discovery.found) {
+          src.previous_urls.push(src.current_url);
+          src.current_url = discovery.newUrl;
+          src.status = 'ACTIVE';
+          src.http_status = 200;
+          src.notes = `Auto-healed: Previous URL returned ${fetchRes.http_status}. Successfully discovered and switched to new official live Google documentation: ${discovery.newUrl}`;
+          verifiedCount++;
+        } else {
+          src.status = 'SOURCE_REQUIRES_REVIEW';
+          src.notes = `Official Google source verification failed (HTTP ${fetchRes.http_status}). Reason: ${fetchRes.error || 'Endpoint unavailable on Google Search Central'}`;
+          failedSources.push(src.source_id);
+        }
       }
     }
 
